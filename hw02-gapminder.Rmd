@@ -1,0 +1,9 @@
+---
+title: "STAT 545A - Homework 2"
+output: 
+    github_document:
+        toc: true
+        keep_md: true
+---
+
+## Introduction
