@@ -48,8 +48,11 @@ length(gapminder[,1])
 
 # Here is a way to get a more comprehensive view of the structure
 str(gapminder)
+
+# We can also use the glimpse function in dplyr to see the structure
+glimpse(gapminder)
 ```
-The only one of these objects that is very useful is the str function. This provides a quick overview of the entire objects size and data types. This is a quick and concise way to get a clear view of the composition of the data.
+The last two functions, str and glimpse, can be very useful. They provides a quick overview of the entire objects size and data types. They are a quick and concise way to get a clear view of the composition of the data.
 
 The variable types of a data fram are the same within each column, but can vary between columns. The types can also be seen with the str function, whose output is shown above. The types are as follows;
 - country   : Factor
@@ -61,3 +64,71 @@ The variable types of a data fram are the same within each column, but can vary 
 We now have a clear idea of the structure, size, and composition of the gapminder dataset. This information will allow us to more easily examine the dataset.
 
 ## Explore Individual Variables
+
+In thi section, I will review the variables present in the data table columns. First, I will examine the categorical variables and then I will explor the numeric variables.
+
+The categorical variables are stored in the country and continent columns as factors. Factors are stored as a vector of integers, with an associated label. Each instance of a factor in the column is stored as an integer from this vector, but is shown as the corresponding label.
+
+The tables below show the levels of each categorical variable and the number of rows with each factor.
+
+```{r}
+# Printing a table for each columns shows the the different levels and the
+# number of instances at each level
+gapminder %>%
+  select(continent) %>%
+  table()
+
+gapminder %>%
+  select(country) %>%
+  table()
+
+# As an aside, if we print the typeof of an instance, we can see the underlying
+# integer type
+typeof(gapminder$continent[1])
+```
+
+To get a sense of scale, we can look at a simple bar chart. I will not plot the country factor this way, as there are too many levels.
+
+```{r}
+gapminder %>%
+  ggplot(aes(x = continent)) + 
+  geom_bar() +
+  ggtitle("Distribution of Rows by Continent") +
+  theme_bw()
+```
+
+Now that we have an idea of the scale, we can begin to get an idea of the districtuion of the factors using summary.
+
+```{r}
+gapminder %>%
+  select(country, continent) %>%
+  summary()
+```
+
+From this data, we can see that Asia has the most fields, with ```r table(gapminder$continent)["Asia"]``` and Oceania the least, with ```r table(gapminder$continent)["Oceania"]```. The average number of instances per continent is ```r sum(table(gapminder$continent))/length(unique(gapminder$continent))```. The Given how few levels there are, it is very easy to get an idea of the frequency of these factors.
+
+The country factor is even easier, as all countries have exactly 12 instances.
+
+```{r}
+countryTable = table(gapminder$country)
+if(max(countryTable) == min(countryTable))
+{
+  printf("Each level occurs the same number of times.")
+}
+```
+
+It will be more interesting now to examine two quantitatve columns, population and lifeExp. I have chosen these columns because population is an integer, and thus discrete, and lifeExp is numeric, and thus continuous.
+
+First, we can look at some summary statistics to see the ranges and the medians, giving us an idea of a typical data point and the distribution.
+
+```{r}
+gapminder %>%
+  select(pop, lifeExp) %>%
+  summary()
+```
+
+to get a better idea of the distribution, we can plot a histogram for the discrete variable and a kernel density plot for the continuous variable.
+
+```{r}
+
+```
