@@ -1,5 +1,5 @@
 ---
-title: "STAT 545A - Homework 2"
+title: "STAT 545A - Homework 2: Exploring Gapminder and Using dplyr"
 output: 
     github_document:
         toc: true
@@ -7,3 +7,57 @@ output:
 ---
 
 ## Introduction
+
+This document will be exploring the "gapminder" dataset as a means of exploring the dplyr and ggplot2 libraries.
+
+```{r}
+# First, I will load the required packages
+library(gapminder)
+library(tidyverse)
+```
+
+## Data Struture:
+### Smell Test the Data
+
+In this section I will review the structure, size, and types of data that are present. First, I will look at the type of gapminder. This is important, as it will determine the classes and methods used to access and manipulate the data.
+
+```{r}
+typeof(gapminder)
+class(gapminder)
+```
+
+First, notice that the class function lists three classes for the gapminder object, all of which are different than typeof. This is because typeof returns the underlying R type of the object which, in this case, is a list. However, this is not the type that the user will generally interface with; that type is provided by class. 
+
+To answer the first question in the homework, the gapminder object is a _data.frame_, as can be see in the output of class. The class of gapminder is *tbl_df*. Three values are listed by class because table_df inherits from tbl, which inherits from data.frame.
+
+Now, I will examine the size of the data. The gapminder object has ```r ncol(gapminder)``` variables/columns and ```r nrow(gapminder)``` rows. There are many different ways to get the number of rows and columns. For example:
+
+```{r}
+# The ways used in the inline code above
+ncol(gapminder)
+nrow(gapminder)
+
+# Here are some different ways to get the number of columns
+length(gapminder) # length of the underlying list object
+length(colnames(gapminder)) # length of the column names list
+length(gapminder[1,]) # length of a single row
+
+# Here are some different ways to get the number of rows
+length(gapminder$country)
+length(gapminder[,1])
+
+# Here is a way to get a more comprehensive view of the structure
+str(gapminder)
+```
+The only one of these objects that is very useful is the str function. This provides a quick overview of the entire objects size and data types. This is a quick and concise way to get a clear view of the composition of the data.
+
+The variable types of a data fram are the same within each column, but can vary between columns. The types can also be seen with the str function, whose output is shown above. The types are as follows;
+- country   : Factor
+- continent : Factor
+- year      : int
+- lifeExp   : num
+- pop       : int
+
+We now have a clear idea of the structure, size, and composition of the gapminder dataset. This information will allow us to more easily examine the dataset.
+
+## Explore Individual Variables
