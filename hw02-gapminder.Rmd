@@ -1,7 +1,8 @@
 ---
 title: "STAT 545A - Homework 2: Exploring Gapminder and Using dplyr"
+author: Glenn McGuinness
 output: 
-    github_document:
+    html_document:
         toc: true
         keep_md: true
 ---
@@ -102,33 +103,185 @@ Now that we have an idea of the scale, we can begin to get an idea of the distri
 ```{r}
 gapminder %>%
   select(country, continent) %>%
-  summary()
+  summary()%>%
+  knitr::kable()
 ```
 
 From this data, we can see that Asia has the most fields, with ```r table(gapminder$continent)["Asia"]``` and Oceania the least, with ```r table(gapminder$continent)["Oceania"]```. The average number of instances per continent is ```r sum(table(gapminder$continent))/length(unique(gapminder$continent))```. The Given how few levels there are, it is very easy to get an idea of the frequency of these factors.
 
-The country factor is even easier, as all countries have exactly 12 instances.
+The country factor is even easier, as all countries have exactly 12 instances, as the table holds data for 12 different years.
 
 ```{r}
 countryTable = table(gapminder$country)
 if(max(countryTable) == min(countryTable))
 {
-  printf("Each level occurs the same number of times.")
+  print("Each level occurs the same number of times.")
 }
 ```
 
-It will be more interesting now to examine two quantitatve columns, population and lifeExp. I have chosen these columns because population is an integer, and thus discrete, and lifeExp is numeric, and thus continuous.
+It will be more interesting now to examine two quantitatve columns, population and lifeExp. I have chosen these columns because population is an integer, and thus discrete, and lifeExp is numeric, and thus continuous. The possible values of an integer are from ```r -.Machine$integer.max``` to ```r .Machine$integer.max```. However, population can only be positive, so the actual minimum of this column will be zero. A double can go between ```r .Machine$double.xmin``` and ```r .Machine$double.xmax```. However, similarly, the lifeExp column will not go below 0 or exceed, or closely approach, the maximum recorded human lifespan, around 120.
 
 First, we can look at some summary statistics to see the ranges and the medians, giving us an idea of a typical data point and the distribution.
 
 ```{r}
 gapminder %>%
   select(pop, lifeExp) %>%
-  summary()
+  summary() %>%
+  knitr::kable()
 ```
 
-to get a better idea of the distribution, we can plot a histogram for the discrete variable and a kernel density plot for the continuous variable.
+We now have a pretty good idea of the overall distribution of the different values. The median and mean give a sense of "typical" value and the minimum, maximum, and the quartiles give an idea of the distribution.
+
+To get a better idea of the distribution, we can plot a histogram for the discrete variable and a kernel density plot for the continuous variable. I will add the mean and median to the plots as well. The distribution of population is much easier to see with a log scale, so not the histogram, but not the kernel density plot, has a log scaled x-axis. Also note that the mean is calculated for the log scaled population.
+
+```{r}
+# Population Histogram
+gapminder %>%
+  ggplot(aes(x = pop, y = ..density..)) +
+  geom_histogram(bins = 50, alpha = 0.85) +
+  geom_vline(xintercept = median(gapminder$pop), colour = 'red') +
+  geom_vline(xintercept = exp(mean(log(gapminder$pop))), colour = 'blue') +
+  scale_x_log10() +
+  theme_bw() +
+  ggtitle("Histogram of Log Population")
+
+# Life Expectancy Kernel Density Plot
+gapminder %>%
+  ggplot(aes(x = lifeExp, y = ..density..)) +
+  geom_density(fill = 'red', alpha = 0.3) +
+  geom_vline(xintercept = median(gapminder$lifeExp), colour = 'red') +
+  geom_vline(xintercept = mean(gapminder$lifeExp), colour = 'blue') +
+  theme_bw() +
+  ggtitle("Density plot of Life Expectancy")
+```
+
+These plots expose some interesting trends in the data. The population appears to be log normal. This is supported by the fact that the median and the log-scaled mean are very close, as they would be in a log-normal distribution. The life expenctancy appears to be bimodal or even trimodal.
+
+## Explore Various Plot Type:
+### Using filter(), select(), and %>%
+
+In this section, I will be using some different plots to get a better understanding of the data. I was interested by the bimodal distribution of life expectancy of the last section, so I will be trying to example what could be causing this.
+
+First, I would like to subset the population by continent and then year, to try to discover if either are a confounding variable.
+
+```{r}
+# Life Expectancy Kernel Density Plot, Faceted by Continent
+gapminder %>%
+  ggplot(aes(x = lifeExp, y = ..density..)) +
+  geom_density(fill = 'red', alpha = 0.3) +
+  facet_grid(~continent) +
+  theme_bw() +
+  ggtitle("Density plot of Life Expectancy")
+
+# Life Expectancy Kernel Density Plot, Faceted by Year
+gapminder %>%
+  ggplot(aes(x = lifeExp, y = ..density..)) +
+  geom_density(fill = 'red', alpha = 0.3) +
+  facet_grid(~year) +
+  theme_bw() +
+  ggtitle("Density Plot of Life Expectancy by Continent")
+```
+
+It appears as though the distribution remains bimodal when sorted by year. However, the relative magnitude of the different peaks varies by year. It also appears as though facetting by continent divides the data so that it looks much more unimodal, though still skewed in every continent.
+
+Lets explore the distribution of life expectancy by continent further. To avoid a confounding effect by year, let's pick the latest year, 2007. A violin plot could clearly show the distribution of life expectancy by continent.
+
+```{r}
+# Life Expectancy Kernel Density Plot, Faceted by Year
+gapminder %>%
+  filter(year == 2007) %>% # Subsetting by year
+  ggplot(aes(x = continent, y = lifeExp)) +
+  geom_violin(fill = 'red', alpha = 0.3) +
+  geom_point(alpha = 0.1) +
+  facet_grid(~year) + # I just kept this to display the year nicely ^_^
+  theme_bw() +
+  ggtitle("Violin Plot of Life Expectancy by Continent")
+```
+Unfortunately, the year alone does not explain the skew in the life expectancy by continent. There are probably other confounding factors.
+
+Next, let's examine if there is a relationship between population and life expectancy. I will limit my observations to Asia.
 
 ```{r}
 
+# Life Expectancy Kernel Density Plot, Faceted by Year
+gapminder %>%
+  filter(continent == "Asia", year == 2007) %>% # Subsetting by year
+  select(lifeExp, pop, year) %>% # Not strictly necessary, but not harmful
+  ggplot(aes(x = pop, y = lifeExp)) +
+  geom_point(alpha = 0.8) +
+  scale_x_log10() +
+  facet_grid(~year) + # I just kept this to display the year nicely ^_^
+  theme_bw() +
+  ggtitle("Scatter Plot of Life Expectancy vs. Population in 2007")
+
+# Life Expectancy Kernel Density Plot, Faceted by Year
+gapminder %>%
+  filter(continent == "Asia") %>% # Subsetting by year
+  select(lifeExp, pop, year) %>% # Not strictly necessary, but not harmful
+  ggplot(aes(x = pop, y = lifeExp)) +
+  geom_point(alpha = 0.8) +
+  scale_x_log10() +
+  facet_grid(~year) + # I just kept this to display the year nicely ^_^
+  theme_bw() +
+  ggtitle("Scatter Plot of Life Expectancy vs. Population")
 ```
+
+There is no relationship between population and life expectancy. However, when I faceted by year, I observed that there is a clear trend of increasing life expectancy by year. This is a reasonable trend to expect, given improvements in food security, medicine, and standard of living throughout the world.
+
+I will examine this trend by averaging life expectancy by year and then trying to examine the trend. I will plot a linear regression line that is fitted to all of the points, pre-average.
+
+```{r}
+# Group by year and, each subset, calculate the mean
+gapminderYearSummary = gapminder %>%
+  group_by(year) %>%
+  summarise(lifeExpByYear = mean(lifeExp))
+
+# I won't pipe for this plot, because I am overlaying two data frames
+ggplot() +
+  geom_point(data = gapminderYearSummary, aes(x = year, y = lifeExpByYear), alpha = 0.8) +
+  geom_smooth(data = gapminder, aes(x = year, y = lifeExp), method = 'lm', formula = y~x) + 
+  theme_bw() +
+  ggtitle("Mean Life Expectancy by Year")
+  
+# Get some residuals
+lifeExpByYearModel = lm(gapminder$lifeExp~gapminder$year)
+gapminder$lifeExpByYearResid = resid(lifeExpByYearModel)
+  
+# QQ plot to look at the residuals
+gapminder %>%
+  ggplot(aes(sample = lifeExpByYearResid)) +
+  stat_qq() +
+  stat_qq_line()+
+  theme_bw() +
+  ggtitle("Scatter Plot of Life Expectancy vs. Population")
+```
+
+While there is clearly a relationship between life expectancy and year, it is not a simple relationship, as can be seen in the qqplot.
+
+Now we have explored several trends in this dataset and reviewed a few different types of plots.
+
+## But I Want to do More!
+
+In this section, I will look at the additional line:
+
+```{r}
+filter(gapminder, country == c("Rwanda", "Afghanistan"))
+```
+
+The question is:
+
+> Evaluate this code and describe the result. Presumably the analyst’s intent was to get the data for Rwanda and Afghanistan. Did they succeed? Why or why not? If not, what is the correct way to do this?
+
+This does not get all of the data for Rwanda and Afghanistan. This is because this logical expression does not compare each element in country to Rwanda or Afghanistan and return a logical or. Rather, it compares the odd column indices to Rwanda and the even to Afghanistan. This is equivalent to comparing the country column to a vector created using rep(c("Rwanda","Afghanistan"), nrow(gapminder) / 2). This will miss some rows for each country. One correct way to do this is the following:
+
+```{r}
+gapminder %>%
+  filter(country == "Rwanda" | country == "Afghanistan") %>%
+  knitr::kable()
+```
+
+Some of the other extra work suggested was performed throughout this assignment.
+
+## Conclusion
+
+In this assignement, I explored different variables in the gapminder data frame using ggplot and dplyr. Initially, several columns were explored by type and numerically, and then trends were observed using different plots.
